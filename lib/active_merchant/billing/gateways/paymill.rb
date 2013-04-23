@@ -15,6 +15,13 @@ module ActiveMerchant #:nodoc:
         super
       end
 
+      ### This method allows to repeat a payment using the payment identifier
+      def repeat_purchase(money, payment_reference, options = {})
+        MultiResponse.run do |r|
+          r.process { purchase_with_payment_reference(money, payment_reference, options) }
+        end
+      end
+
       def purchase(money, credit_card, options = {})
         MultiResponse.run do |r|
           r.process { save_card(credit_card) }
@@ -74,8 +81,8 @@ module ActiveMerchant #:nodoc:
         parsed = JSON.parse(raw_response)
 
         options = {
-          :authorization => authorization_from(parsed),
-          :test => (parsed['mode'] == 'test'),
+            :authorization => authorization_from(parsed),
+            :test => (parsed['mode'] == 'test'),
         }
 
         Response.new(true, 'Transaction approved', parsed, options)
@@ -83,10 +90,20 @@ module ActiveMerchant #:nodoc:
 
       def authorization_from(parsed_response)
         [
-          parsed_response['data']['id'],
-          parsed_response['data']['preauthorization'].try(:[], 'id')
+            parsed_response['data']['id'],
+            parsed_response['data']['preauthorization'].try(:[], 'id')
         ].join(";")
       end
+
+      def purchase_with_payment_reference(money, payment_reference, options)
+        post = {}
+
+        add_amount(post, money, options)
+        post[:payment] = payment_reference
+        post[:description] = options[:description]
+        commit(:post, 'transactions', post)
+      end
+
 
       def purchase_with_token(money, card_token, options)
         post = {}
