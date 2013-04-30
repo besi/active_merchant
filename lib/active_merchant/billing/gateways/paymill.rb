@@ -52,6 +52,16 @@ module ActiveMerchant #:nodoc:
         post[:description] = options[:description]
         commit(:post, "refunds/#{transaction_id(authorization)}", post)
       end
+      
+      
+      def purchase_with_token(money, card_token, options)
+        post = {}
+
+        add_amount(post, money, options)
+        post[:token] = card_token
+        post[:description] = options[:description]
+        commit(:post, 'transactions', post)
+      end
 
       private
 
@@ -100,16 +110,6 @@ module ActiveMerchant #:nodoc:
 
         add_amount(post, money, options)
         post[:payment] = payment_reference
-        post[:description] = options[:description]
-        commit(:post, 'transactions', post)
-      end
-
-
-      def purchase_with_token(money, card_token, options)
-        post = {}
-
-        add_amount(post, money, options)
-        post[:token] = card_token
         post[:description] = options[:description]
         commit(:post, 'transactions', post)
       end
