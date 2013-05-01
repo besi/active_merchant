@@ -22,10 +22,15 @@ module ActiveMerchant #:nodoc:
         end
       end
 
-      def purchase(money, credit_card, options = {})
-        MultiResponse.run do |r|
-          r.process { save_card(credit_card) }
-          r.process { purchase_with_token(money, r.authorization, options) }
+      def purchase(money, credit_card_or_token, options = {})
+
+        if credit_card_or_token.is_a? String
+          purchase_with_token(money, credit_card_or_token, options)
+        else
+          MultiResponse.run do |r|
+            r.process { save_card(credit_card_or_token) }
+            r.process { purchase_with_token(money, r.authorization, options) }
+          end
         end
       end
 
@@ -51,16 +56,6 @@ module ActiveMerchant #:nodoc:
         post[:amount] = amount(money)
         post[:description] = options[:description]
         commit(:post, "refunds/#{transaction_id(authorization)}", post)
-      end
-      
-      
-      def purchase_with_token(money, card_token, options)
-        post = {}
-
-        add_amount(post, money, options)
-        post[:token] = card_token
-        post[:description] = options[:description]
-        commit(:post, 'transactions', post)
       end
 
       private
@@ -110,6 +105,16 @@ module ActiveMerchant #:nodoc:
 
         add_amount(post, money, options)
         post[:payment] = payment_reference
+        post[:description] = options[:description]
+        commit(:post, 'transactions', post)
+      end
+
+
+      def purchase_with_token(money, card_token, options)
+        post = {}
+
+        add_amount(post, money, options)
+        post[:token] = card_token
         post[:description] = options[:description]
         commit(:post, 'transactions', post)
       end
